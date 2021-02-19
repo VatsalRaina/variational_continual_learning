@@ -1,0 +1,2 @@
+# variational_continual_learning
+Variational Continual Learning for discriminative models
