@@ -14,7 +14,6 @@ class Vanilla_NN(torch.nn.Module):
         self.outputLayer = torch.nn.Linear(hidden_dim, out_dim)
 
     def forward(self, x):
-
         h1 = self.relu(self.inputLayer(x))
         h2 = self.relu(self.hiddenLayer(h1))
         prediction_logits = self.outputLayer(h2)
