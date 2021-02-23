@@ -142,6 +142,14 @@ def main(args):
     for task_id in range(args.num_tasks):
         #Incrementally train and test the MFVI_NN
         #TODO
+        optimizer.zero_grad()
+        x, y_true = batch
+
+        loss = model.vcl_loss(x, y_true, head, len(task_data))
+        epoch_loss += len(x) * loss.item()
+
+        loss.backward()
+        optimizer.step()
 
 if __name__ == '__main__':
     args = parser.parse_args()
