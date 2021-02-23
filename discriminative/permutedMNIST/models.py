@@ -18,9 +18,7 @@ class Vanilla_NN(torch.nn.Module):
         h2 = self.relu(self.hiddenLayer(h1))
         prediction_logits = self.outputLayer(h2)
         
-        return prediction_logits
-
-        
+        return prediction_logits        
 
 
 class MFVI_NN(torch.nn.Module):
@@ -38,7 +36,7 @@ class MFVI_NN(torch.nn.Module):
         pass
 
     def forward(self, x, task:int):
-        """Forward pass of the multi-head bayesian nn"""
+        """Forward pass of the multi-head bayesian nn. Does not include the last Softmax layer used for classification!"""
 
         W_mean, W_logvar, b_mean, b_logvar = self.posterior
         W_mean_head, W_logvar_head, b_mean_head, b_logvar_head = self.posterior_head[task]
@@ -61,17 +59,22 @@ class MFVI_NN(torch.nn.Module):
         return zip(W_sample, b_sample)
 
 
-    def mc_vcl_loss(self, x, y):
+    def mc_vcl_loss(self, x, y, n_samples):
         """
         Returns one basic summation element of the Monte Carlo version of the VCL loss.
-        This loss will be called for many epochs, hence ensuring the sum converges towards the true distribution.
         """
-        return  self.log_likelihood(x, y) - kl_divergence(self.posterior, self.prior)
+        return  self.log_likelihood(x, y) - kl_divergence()
 
 
-    def log_likelihood(self, x, y):
+    def log_likelihood(self, x, y, task, n_samples):
+        list_predicted_y = []
+        for sample in range(n_samples):
+            list_predicted_y.append(self.forward(x, task))
+        return -nn.CrossEntropyLoss()(torch.cat(list_predicted_y), y.repeat((n_samples,1)))
+
+    def kl_divergence(self):
         pass
 
-    def kl_divergence(self, posterior, prior):
+    def init_weights(self):
         pass
 
