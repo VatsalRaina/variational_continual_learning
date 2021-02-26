@@ -68,14 +68,13 @@ def main(args):
     """
 
     # Get all data for each task here
-    #TODO
-
-    # Using the data for the first task, train the Vanilla_NN
-    # Assume I've got x_train, y_train, x_test, y_test for the first task as tensors
     # Note, the images must be converted to vectors to be used as inputs to deep neural networks
+    #TODO
+    # Adian must define the list of tensors X_train, Y_train
 
-    # Train Vanilla_NN
 
+    # Train Vanilla_NN using data for first task
+    x_train, y_train = X_train[0], Y_train[0]
     train_data = TensorDataset(x_train, y_train)
     train_sampler = RandomSampler(train_data)
     train_dataloader = DataLoader(train_data, sampler=train_sampler, batch_size=args.batch_size)
@@ -85,7 +84,6 @@ def main(args):
     optimizer = AdamW(model.parameters(),
                     lr = args.learning_rate,
                     eps = args.adam_epsilon
-                    # weight_decay = 0.01
                     )
     loss_values = []
     criterion = torch.nn.CrossEntropyLoss()
@@ -120,10 +118,6 @@ def main(args):
             # Clip the norm of the gradients to 1.0.
             # This is to help prevent the "exploding gradients" problem.
             torch.nn.utils.clip_grad_norm_(model.parameters(), 1.0)
-            # if (step+1) % accumulation_steps == 0:
-            # Update parameters and take a step using the computed gradient.
-            # The optimizer dictates the "update rule"--how the parameters are
-            # modified based on their gradients, the learning rate, etc.
             optimizer.step()
         # Calculate the average loss over the training data.
         avg_train_loss = total_loss / len(train_dataloader)
@@ -138,10 +132,50 @@ def main(args):
     # Now we are at a stage where we can extract the weights from the above trained model and call them the means
     mf_weights = model.parameters()
     mf_variances = None
+    vanilla_weights = [mf_weights, mf_variances]
 
+    model = MFVI_NN(in_dim=x_train.size()[1], hidden_dim=args.hidden_size, out_dim=10, num_tasks=args.num_tasks, prev_weights=vanilla_weights).to(device)
+    criterion = torch.nn.CrossEntropyLoss()
     for task_id in range(args.num_tasks):
-        #Incrementally train and test the MFVI_NN
-        #TODO
+        # Extract task specific data
+        x_train, y_train = X_train[task_id], Y_train[task_id]
+        train_data = TensorDataset(x_train, y_train)
+        train_sampler = RandomSampler(train_data)
+        train_dataloader = DataLoader(train_data, sampler=train_sampler, batch_size=args.batch_size)
+        # Set optimizer to be equal to all the shared parameters and the task specific head's parameters
+        parameters = []
+        parameters.extend(model.inputLayer.parameters())
+        parameters.extend(model.hiddenLayer.parameters())
+        parameters.extend(model.outputHeads[task_id].parameters())
+        optimizer = AdamW(parameters, lr = args.learning_rate, eps = args.adam_epsilon)
+        loss_values = []
+        model.train()
+        for epoch in range(args.n_epochs):
+            for step, batch in enumerate(train_dataloader):
+                b_x = batch[0].to(device)
+                b_y = batch[1].to(device)
+                model.zero_grad()
+                prediction_logits = model(b_x, task_id)
+                fit_loss = criterion(prediction_logits, b_y)
+                # This is an inbuilt function for the imported BNN
+                # However, this KL term is finding the KL divergence between the setting of parameters in the current and previous mini-batch
+                # We are actually interested in finding the KL divergence between the setting of the parameters in the current mini-batch 
+                # and the the final setting of the parameters from the previous TASK
+                # So we will need to write our own KL divergence function which finds KL only for the shared parameters
+                complexity_loss = model.nn_kl_divergence()  
+                loss = fit_loss + complexity_loss
+                total_loss += loss.item()
+                optimizer.zero_grad()
+                loss.backward()
+                optimizer.step()
+            avg_train_loss = total_loss / len(train_dataloader)
+            loss_values.append(avg_train_loss)
+            print("")
+            print("  Average training loss: {0:.2f}".format(avg_train_loss))
+
+        # Now perform evaluation on the test data
+        x_test, y_test = X_test[task_id], Y_test[task_id]
+        #TODO 
 
 if __name__ == '__main__':
     args = parser.parse_args()
