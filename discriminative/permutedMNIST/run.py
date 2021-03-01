@@ -73,7 +73,7 @@ def main(args):
     # Adian must define the list of tensors X_train, Y_train
 
 
-    # Train Vanilla_NN using data for first task
+    ################## Train Vanilla_NN using data for first task ######################
     x_train, y_train = X_train[0], Y_train[0]
     train_data = TensorDataset(x_train, y_train)
     train_sampler = RandomSampler(train_data)
@@ -133,6 +133,8 @@ def main(args):
     mf_weights = model.parameters()
     mf_variances = None
     vanilla_weights = [mf_weights, mf_variances]
+
+    ################## Train MFVI NN #######################
 
     model = MFVI_NN(in_dim=x_train.size()[1], hidden_dim=args.hidden_size, out_dim=10, num_tasks=args.num_tasks, prev_weights=vanilla_weights).to(device)
     criterion = torch.nn.CrossEntropyLoss()
