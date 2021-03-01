@@ -24,6 +24,43 @@ class Vanilla_NN(torch.nn.Module):
         return prediction_logits        
 
 
+
+# See explanation at:
+# https://towardsdatascience.com/blitz-a-bayesian-neural-network-library-for-pytorch-82f9998916c7
+# Original code at:
+# https://github.com/piEsposito/blitz-bayesian-deep-learning 
+@variational_estimator
+class MFVI_NN(torch.nn.Module):
+    def __init__(self, in_dim, hidden_dim, out_dim, num_tasks, prev_weights):
+
+        super(MFVI_NN, self).__init__()
+
+        self.relu = torch.nn.RELU()
+        self.inputLayer = BayesianLinear(in_dim, hidden_dim)
+        self.hiddenLayer = BayesianLinear(hidden_dim, hidden_dim)
+        self.outputHeads = []
+        for i in range(num_tasks):
+            self.outputHeads.append(BayesianLinear(hidden_dim, out_dim))
+
+        # Initialise using the Vanilla neural network weights when the model is first initialised
+        self.init_weights(prev_weights)
+
+    def init_weights():
+        """
+        Initialise using Vanilla neural netwrok parameters for the means and a pre-decided variance
+        """
+        pass
+
+    def forward(self, x, task):
+
+        h1 = self.relu(self.inputLayer(x))
+        h2 = self.relu(self.hiddenLayer(h1))
+        prediction_logits = self.outputHeads[task](h2)
+        
+        return prediction_logits
+
+
+
 class MFVI_NN_raw(torch.nn.Module):
     def __init__(self):
         """Bayesian multi-task neural network working through variational inference, implemented from scratch."""
@@ -147,37 +184,50 @@ class MFVI_NN_raw(torch.nn.Module):
             self.register_parameter('b_mean_posterior_head, head '+str(head), b_mean_posterior_head[head])
 
 
+#################### ACTUALLY, LET US TRY TO PROGRAM IT LAYER BY LAYER ######################################################
 
-# See explanation at:
-# https://towardsdatascience.com/blitz-a-bayesian-neural-network-library-for-pytorch-82f9998916c7
-# Original code at:
-# https://github.com/piEsposito/blitz-bayesian-deep-learning 
-@variational_estimator
-class MFVI_NN(torch.nn.Module):
-    def __init__(self, in_dim, hidden_dim, out_dim, num_tasks, prev_weights):
+class VCL_simple_layer(torch.nn.Module):
+    def __init__(self, input_size: int, output_size: int, init_variance: float = 1e-5):
+        super.__init__()
+        self.input_size = input_size
+        self.output_size = output_size
+        self.init_variance = init_variance
 
-        super(MFVI_NN, self).__init__()
 
-        self.relu = torch.nn.RELU()
-        self.inputLayer = BayesianLinear(in_dim, hidden_dim)
-        self.hiddenLayer = BayesianLinear(hidden_dim, hidden_dim)
-        self.outputHeads = []
-        for i in range(num_tasks):
-            self.outputHeads.append(BayesianLinear(hidden_dim, out_dim))
+        prior_W_mean = torch.zeros(self.output_size,self.input_size) # Reversed dimensions for torch.nn.functional.linear
+        prior_W_logvar = torch.zeros(self.output_size,self.input_size)
+        prior_b_mean = torch.zeros(self.output_size)
+        prior_b_logvar = torch.zeros(self.output_size)
+        self.register_buffer('prior_W_mean', prior_W_mean)
+        self.register_buffer('prior_W_logvar', prior_W_logvar)
+        self.register_buffer('prior_b_mean', prior_b_mean)
+        self.register_buffer('prior_b_logvar', prior_b_logvar)
 
-        # Initialise using the Vanilla neural network weights when the model is first initialised
-        self.init_weights(prev_weights)
+        posterior_W_mean = torch.empty(self.output_size,self.input_size)
+        posterior_W_logvar = torch.nn.init.constant(torch.empty(self.output_size,self.input_size), self.init_variance)
+        posterior_b_mean = torch.empty(self.output_size)
+        posterior_b_logvar = torch.nn.init.constant(torch.empty(self.output_size), self.init_variance)
+        self.register_parameter('posterior_W_mean', posterior_W_mean)
+        self.register_parameter('posterior_W_logvar', posterior_W_logvar)
+        self.register_parameter('posterior_b_mean', posterior_b_mean)
+        self.register_parameter('posterior_b_logvar', posterior_b_logvar)
 
-    def init_weights():
-        """
-        Initialise using Vanilla neural netwrok parameters for the means and a pre-decided variance
-        """
-        pass
+    def sample_parameters(self):
+        epsilon_W = torch.randn_like(W_mean[layer])
+        epsilon_b = torch.randn_like(b_mean[layer])
 
-    def forward(self, x, task):
+        W_sample.append(posterior_W_mean[layer] + espilon_W * torch.exp(0.5 * posterior_W_logvar[layer_n])) # Element-wise multiplication of epsilon with variance
+        b_sample.append(posterior_b_mean[layer] + espilon_W * torch.exp(0.5 * posterior_b_logvar[layer_n])) 
+        return W_sample, b_sample
 
-        h1 = self.relu(self.inputLayer(x))
-        h2 = self.relu(self.hiddenLayer(h1))
-        prediction_logits = self.outputHeads[task](h2)
-        
-        return prediction_logits
+    def forward(self, x):
+        W, b = self.sample_parameters()
+        return torch.nn.functional.linear(x, W, b) # Not sure if there should be an activation function on top of this
+
+    def kl_divergence(self):
+        return 0 #TODO: understand KL div
+    
+    def next_step(self):
+        """The previous posterior becomes the new prior"""
+
+
