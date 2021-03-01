@@ -190,7 +190,32 @@ class MFVI_NN_raw(torch.nn.Module):
 
 
 class VCL_NN(torch.nn.module):
-    def __init__(self, input_size, layer_size, output_size, ):
+    def __init__(self, input_size, layer_size, output_size, n_shared_layers, n_heads, init_variance):
         super.__init__()
+        self.input_size = input_size
+        self.layer_size = layer_size
+        self.output_size = output_size
+        self.n_shared_layers = n_layers
+        self.n_heads = n_heads
+        self.init_variance = init_variance
+
+        self.layers = [VCL_layer(input_size, layer_size, input_variance)]
+        for layer in range(n_shared_layers - 1):
+            self.layers.append(VCL_layer(layer_size, layer_size, input_variance))
+        self.layers.append(VCL_layer(layer_size, output_size, init_variance))
+
+    def forward(self, x, head):
+        pass
+
+    def VCL_loss(self, head, X, y):
+        pass
+
+    def KL_div(self, head):
+        pass
+
+    def log_likelihood(self, head, X, y):
+        pass
+
+
 
 

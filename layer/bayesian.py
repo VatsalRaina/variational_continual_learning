@@ -37,7 +37,7 @@ class VCL_layer(torch.nn.Module):
 
     def forward(self, x):
         W, b = self.sample_parameters()
-        return torch.nn.functional.linear(x, W, b) # Not sure if there should be an activation function on top of this
+        return torch.nn.functional.linear(x, W, b) # No activation function here, will be managed in main model
 
     def kl_divergence(self):
         return 0 #TODO: understand KL div
