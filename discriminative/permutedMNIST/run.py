@@ -18,8 +18,7 @@ from torch.utils.data import TensorDataset, DataLoader, RandomSampler, Sequentia
 
 from transformers import AdamW, get_linear_schedule_with_warmup
 
-from models import Vanilla_NN
-from models import MFVI_NN
+from models import Vanilla_NN, MFVI_NN, VCL_discriminative
 
 parser = argparse.ArgumentParser(description='Get all command line arguments.')
 parser.add_argument('--hidden_size', type=int, default=100, help='Specify the hidden embedding size in neural nets')
@@ -48,7 +47,7 @@ def get_default_device():
     else:
         return torch.device('cpu')
 
-def main(args):
+def main(args, use_from_scratch_model=True):
 
     # Set the seed value all over the place to make this reproducible.
     seed_val = args.seed
@@ -136,8 +135,15 @@ def main(args):
 
     ################## Train MFVI NN #######################
 
-    model = MFVI_NN(in_dim=x_train.size()[1], hidden_dim=args.hidden_size, out_dim=10, num_tasks=args.num_tasks, prev_weights=vanilla_weights).to(device)
-    criterion = torch.nn.CrossEntropyLoss()
+    if use_from_scratch_model:
+        model = VCL_discriminative(input_size = x_train.size()[1], shared_layer_dim=args.hidden_size, output_dim=10, n_heads=args.num_tasks, prev_weights=vanilla_weights).to(device)
+        optimizer = AdamW(model.parameters(), lr = args.learning_rate, eps = args.adam_epsilon)
+    
+    else:
+        model = MFVI_NN(in_dim=x_train.size()[1], hidden_dim=args.hidden_size, out_dim=10, num_tasks=args.num_tasks, prev_weights=vanilla_weights).to(device)
+        criterion = torch.nn.CrossEntropyLoss()
+    
+    
     for task_id in range(args.num_tasks):
         # Extract task specific data
         x_train, y_train = X_train[task_id], Y_train[task_id]
@@ -145,11 +151,12 @@ def main(args):
         train_sampler = RandomSampler(train_data)
         train_dataloader = DataLoader(train_data, sampler=train_sampler, batch_size=args.batch_size)
         # Set optimizer to be equal to all the shared parameters and the task specific head's parameters
-        parameters = []
-        parameters.extend(model.inputLayer.parameters())
-        parameters.extend(model.hiddenLayer.parameters())
-        parameters.extend(model.outputHeads[task_id].parameters())
-        optimizer = AdamW(parameters, lr = args.learning_rate, eps = args.adam_epsilon)
+        if not use_from_scratch_model:
+            parameters = []
+            parameters.extend(model.inputLayer.parameters())
+            parameters.extend(model.hiddenLayer.parameters())
+            parameters.extend(model.outputHeads[task_id].parameters())
+            optimizer = AdamW(parameters, lr = args.learning_rate, eps = args.adam_epsilon)
         loss_values = []
         model.train()
         for epoch in range(args.n_epochs):
@@ -157,17 +164,24 @@ def main(args):
                 b_x = batch[0].to(device)
                 b_y = batch[1].to(device)
                 model.zero_grad()
-                prediction_logits = model(b_x, task_id)
-                fit_loss = criterion(prediction_logits, b_y)
-                # This is an inbuilt function for the imported BNN
-                # However, this KL term is finding the KL divergence between the setting of parameters in the current and previous mini-batch
-                # We are actually interested in finding the KL divergence between the setting of the parameters in the current mini-batch 
-                # and the the final setting of the parameters from the previous TASK
-                # So we will need to write our own KL divergence function which finds KL only for the shared parameters
-                complexity_loss = model.nn_kl_divergence()  
-                loss = fit_loss + complexity_loss
-                total_loss += loss.item()
                 optimizer.zero_grad()
+
+
+                if not use_from_scratch_model:
+                    prediction_logits = model(b_x, task_id)
+                    fit_loss = criterion(prediction_logits, b_y)
+                    # This is an inbuilt function for the imported BNN
+                    # However, this KL term is finding the KL divergence between the setting of parameters in the current and previous mini-batch
+                    # We are actually interested in finding the KL divergence between the setting of the parameters in the current mini-batch 
+                    # and the the final setting of the parameters from the previous TASK
+                    # So we will need to write our own KL divergence function which finds KL only for the shared parameters
+                    complexity_loss = model.nn_kl_divergence()  
+                    loss = fit_loss + complexity_loss
+                
+                if use_from_scratch_model:
+                    loss = model.vcl_loss(b_x, b_y, task_id, len(task_data))
+                
+                total_loss += loss.item()
                 loss.backward()
                 optimizer.step()
             avg_train_loss = total_loss / len(train_dataloader)
