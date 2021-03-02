@@ -8,7 +8,6 @@ class VCL_layer(torch.nn.Module):
         self.output_size = output_size
         self.init_variance = init_variance
 
-
         prior_W_mean = torch.zeros(self.output_size,self.input_size) # Reversed dimensions for torch.nn.functional.linear
         prior_W_logvar = torch.zeros(self.output_size,self.input_size)
         prior_b_mean = torch.zeros(self.output_size)
@@ -40,9 +39,10 @@ class VCL_layer(torch.nn.Module):
         return torch.nn.functional.linear(x, W, b) # No activation function here, will be managed in main model
 
     def kl_divergence(self):
+        
         return 0 #TODO: understand KL div
     
-    def next_step(self):
+    def update_prior_posterior(self):
         """The previous posterior becomes the new prior"""
         self._buffers['prior_W_mean'].data.copy_(self.posterior_W_mean.data)
         self._buffers['prior_W_logvar'].data.copy_(self.posterior_W_logvar.data)

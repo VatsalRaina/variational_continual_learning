@@ -121,7 +121,7 @@ class MFVI_NN_raw(torch.nn.Module):
     def log_likelihood(self, x, y, task, n_samples):
         list_predicted_y = []
         for sample in range(n_samples):
-            list_predicted_y.append(self.forward(x, task))
+            list_predicted_y.append(self(x, task))
         return -nn.CrossEntropyLoss()(torch.cat(list_predicted_y), y.repeat((n_samples,1)))
 
     def kl_divergence(self):
@@ -189,32 +189,52 @@ class MFVI_NN_raw(torch.nn.Module):
 
 
 
-class VCL_NN(torch.nn.module):
-    def __init__(self, input_size, layer_size, output_size, n_shared_layers, n_heads, init_variance):
+class VCL_discriminative(torch.nn.module):
+    def __init__(self, input_size, shared_layer_size, output_size, n_shared_layers, n_heads, init_variance):
         super.__init__()
         self.input_size = input_size
-        self.layer_size = layer_size
+        self.shared_layer_size = layer_size
         self.output_size = output_size
         self.n_shared_layers = n_layers
         self.n_heads = n_heads
         self.init_variance = init_variance
 
-        self.layers = [VCL_layer(input_size, layer_size, input_variance)]
-        for layer in range(n_shared_layers - 1):
-            self.layers.append(VCL_layer(layer_size, layer_size, input_variance))
-        self.layers.append(VCL_layer(layer_size, output_size, init_variance))
+        layer_sizes = [input_size] + [shared_layer_size]*n_shared_layers
+        self.shared_layers = torch.nn.ModuleList([VCL_layer(layer_sizes[i], layer_sizes[i+1], init_variance) for i in range(len(layer_sizes)-1)])
 
-    def forward(self, x, head):
-        pass
+        self.heads = torch.nn.ModuleList([VCL_layer(shared_layer_size[-1], output_size, init_variance) for _ in range(n_heads)])
 
-    def VCL_loss(self, head, X, y):
-        pass
+        self.softmax = nn.Softmax(dim=1)
+        return
 
-    def KL_div(self, head):
-        pass
+    def forward(self, x, head:int):
+        for layer in self.layers[:-1]:
+            x = torch.nn.functional.relu(layer(x))
+        x = self.layers[-1](x)
+        x = self.softmax(x)
+        return x
 
-    def log_likelihood(self, head, X, y):
-        pass
+    def vcl_loss(self, head:int, x, y):
+        return self.KL_div(head) - torch.nn.NLLLoss()(self(x, head), y)
+
+    def kl_divergence(self, head:int):
+        div = torch.zeros(1,0)
+        for layer in self.shared_layers:
+            div = torch.add(div, layer.kl_divergence())
+        div = torch.add(div, self.heads[head].kl_divergence())
+        return div
+
+    def update_prior_posterior(self. head:int):
+        for layer in self.shared_layers:
+            layer.update_prior_posterior()
+        self.heads[head].update_prior_posterior()
+        return
+
+    def prediction(self, x, head:int):
+        return torch.argmax(self(x, head))
+
+
+
 
 
 
