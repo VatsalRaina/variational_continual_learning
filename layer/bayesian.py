@@ -39,8 +39,35 @@ class VCL_layer(torch.nn.Module):
         return torch.nn.functional.linear(x, W, b) # No activation function here, will be managed in main model
 
     def kl_divergence(self):
-        
-        return 0 #TODO: understand KL div
+        #TODO: redo the demonstration of this
+        prior_means = torch.autograd.Variable(torch.cat(
+            (torch.reshape(self.prior_W_mean, (-1,)),
+             torch.reshape(self.prior_b_mean, (-1,)))),
+            requires_grad=False
+        )
+        prior_logvars = torch.autograd.Variable(torch.cat(
+            (torch.reshape(self.prior_W_logvar, (-1,)),
+             torch.reshape(self.prior_b_logvar, (-1,)))),
+            requires_grad=False
+        )
+        prior_vars = torch.exp(prior_log_vars)
+
+        posterior_means = torch.cat(
+            (torch.reshape(self.posterior_W_mean, (-1,)),
+             torch.reshape(self.posterior_b_mean, (-1,))),
+        )
+        posterior_logvars = torch.cat(
+            (torch.reshape(self.posterior_W_logvar, (-1,)),
+             torch.reshape(self.posterior_b_logvar, (-1,))),
+        )
+        posterior_vars = torch.exp(posterior_logvars)
+
+        # compute kl divergence (this computation is valid for multivariate diagonal Gaussians)
+        kl_elementwise = posterior_vars / (prior_vars + self.epsilon) + \
+                         torch.pow(prior_means - posterior_means, 2) / (prior_vars + self.epsilon) - \
+                         1 + prior_logvars - posterior_logvars
+
+        return 0.5 * kl_elementwise.sum()
     
     def update_prior_posterior(self):
         """The previous posterior becomes the new prior"""

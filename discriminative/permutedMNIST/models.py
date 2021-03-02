@@ -62,7 +62,7 @@ class MFVI_NN(torch.nn.Module):
 
 
 
-class MFVI_NN_raw(torch.nn.Module):
+class VCL_discriminative_1(torch.nn.Module):
     def __init__(self):
         """Bayesian multi-task neural network working through variational inference, implemented from scratch."""
         super(MFVI_NN, self).__init__(n_heads: int, input_size:int, layer_size:int, n_layers:int, output_size:int, n_heads: int, initial_variance:float)
@@ -183,10 +183,6 @@ class MFVI_NN_raw(torch.nn.Module):
             self.register_parameter('W_logvar_posterior_head, head '+str(head), W_mean_posterior_head[head])
             self.register_parameter('b_mean_posterior_head, head '+str(head), b_mean_posterior_head[head])
             self.register_parameter('b_mean_posterior_head, head '+str(head), b_mean_posterior_head[head])
-
-
-#################### ACTUALLY, LET US TRY TO PROGRAM IT LAYER BY LAYER ######################################################
-
 
 
 class VCL_discriminative(torch.nn.module):
