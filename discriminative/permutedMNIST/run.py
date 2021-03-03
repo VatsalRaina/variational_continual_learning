@@ -30,6 +30,62 @@ parser.add_argument('--coreset_size', type=int, default=1, help='Seed value for 
 parser.add_argument('--adam_epsilon', type=float, default=e-8, help='Epislon value in Adam optimizer')
 parser.add_argument('--learning_rate', type=int, default=2e-3, help='Learning rate during training')
 
+import gzip
+import pickle 
+from copy import deepcopy
+from PIL import Image
+
+class PermutedMnistGenerator():
+    def __init__(self, num_tasks=10):
+        #Unzipping and reading Compressex MNIST DATA
+        f = gzip.open('mnist.pkl.gz', 'rb')
+        u = pickle._Unpickler( f )
+        u.encoding = 'latin1'
+        train_set, valid_set, test_set = u.load()
+        f.close()
+
+        self.X_train = np.vstack((train_set[0], valid_set[0]))
+        self.Y_train = np.hstack((train_set[1], valid_set[1]))
+        self.X_test = test_set[0]
+        self.Y_test = test_set[1]
+
+    def create_tasks(self, num_tasks=10):
+        np.random.seed(0)
+
+        X_train, Y_train, X_test, Y_test = [], [], [] ,[]
+
+        for i in range(num_tasks):
+            x_train, y_train, x_test, y_test = self.generate_new_task()
+            X_train.append(x_train)
+            Y_train.append(y_train)
+            X_test.append(x_test)
+            Y_test.append(y_test)
+
+        return (X_train, Y_train, X_test, Y_test)
+
+    def print_example(self, examples=[0]):
+        for i in examples:
+            array = self.X_train[example]
+            array_2D = np.reshape(array, (28, 28))
+            img = Image.fromarray(np.uint8(array_2D * 255) , 'L')
+            img.show()
+
+    def generate_new_task(self):
+        perm_inds = list(range(self.X_train.shape[1]))
+        np.random.shuffle(perm_inds)
+
+        # Retrieve train data
+        x_train = deepcopy(self.X_train)
+        x_train = x_train[:,perm_inds]
+        y_train = np.eye(10)[self.Y_train]   #One hot encodes labels
+
+        # Retrieve test data
+        x_test = deepcopy(self.X_test)
+        x_test = x_test[:,perm_inds]
+        y_test = np.eye(10)[self.Y_test]
+
+        return x_train, y_train, x_test, y_test
+
 def format_time(elapsed):
     '''
     Takes a time in seconds and returns a string hh:mm:ss
@@ -73,6 +129,8 @@ def main(args, use_from_scratch_model=True):
 
 
     ################## Train Vanilla_NN using data for first task ######################
+    data_processor = PermutedMnistGenerator(args.num_tasks)
+    X_train, Y_train, X_test, Y_test = data_processor.create_tasks(args.num_tasks)
     x_train, y_train = X_train[0], Y_train[0]
     train_data = TensorDataset(x_train, y_train)
     train_sampler = RandomSampler(train_data)
