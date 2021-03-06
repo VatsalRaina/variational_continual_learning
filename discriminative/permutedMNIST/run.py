@@ -29,6 +29,8 @@ parser.add_argument('--coreset_size', type=int, default=0, help='Specify the cor
 parser.add_argument('--coreset_size', type=int, default=1, help='Seed value for reproducibility')
 parser.add_argument('--adam_epsilon', type=float, default=e-8, help='Epislon value in Adam optimizer')
 parser.add_argument('--learning_rate', type=int, default=2e-3, help='Learning rate during training')
+parser.add_argument('--use_from_scratch_model', action='store_true', help='Which model to use')
+
 
 import gzip
 import pickle 
@@ -103,8 +105,9 @@ def get_default_device():
     else:
         return torch.device('cpu')
 
-def main(args, use_from_scratch_model=True):
+def main(args):
 
+    use_from_scratch_model = args.use_from_scratch_model
     # Set the seed value all over the place to make this reproducible.
     seed_val = args.seed
     random.seed(seed_val)
