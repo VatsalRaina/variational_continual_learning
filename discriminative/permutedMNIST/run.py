@@ -66,7 +66,7 @@ class PermutedMnistGenerator():
         return (X_train, Y_train, X_test, Y_test)
 
     def print_example(self, examples=[0]):
-        for i in examples:
+        for example in examples:
             array = self.X_train[example]
             array_2D = np.reshape(array, (28, 28))
             img = Image.fromarray(np.uint8(array_2D * 255) , 'L')
@@ -79,12 +79,14 @@ class PermutedMnistGenerator():
         # Retrieve train data
         x_train = deepcopy(self.X_train)
         x_train = x_train[:,perm_inds]
-        y_train = np.eye(10)[self.Y_train]   #One hot encodes labels
+        # y_train = np.eye(10)[self.Y_train]   #One hot encodes labels
+        y_train = self.Y_train
 
         # Retrieve test data
         x_test = deepcopy(self.X_test)
         x_test = x_test[:,perm_inds]
-        y_test = np.eye(10)[self.Y_test]
+        # y_test = np.eye(10)[self.Y_test]
+        y_test = self.Y_test
 
         return x_train, y_train, x_test, y_test
 

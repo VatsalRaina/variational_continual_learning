@@ -48,7 +48,7 @@ class MFVI_NN(torch.nn.Module):
             self.outputHeads.append(BayesianLinear(hidden_dim, out_dim))
 
         # Initialise using the Vanilla neural network weights when the model is first initialised
-        self.init_weights(prev_weights)
+        # self.init_weights(prev_weights)
 
     def init_weights(self, prev_weights):
         """
