@@ -125,12 +125,6 @@ def main(args):
     4) Generate accuracy plot for how it drops with each task
     """
 
-    # Get all data for each task here
-    # Note, the images must be converted to vectors to be used as inputs to deep neural networks
-    #TODO
-    # Adian must define the list of tensors X_train, Y_train
-
-
     ################## Train Vanilla_NN using data for first task ######################
     data_processor = PermutedMnistGenerator(args.num_tasks)
     X_train, Y_train, X_test, Y_test = data_processor.create_tasks(args.num_tasks)
@@ -197,7 +191,7 @@ def main(args):
     ################## Train MFVI NN #######################
 
     if use_from_scratch_model:
-        model = VCL_discriminative(input_size = x_train.size()[1], shared_layer_dim=args.hidden_size, output_dim=10, n_heads=args.num_tasks, prev_weights=vanilla_weights).to(device)
+        model = VCL_discriminative(input_dim = x_train.size()[1], shared_layer_dim=args.hidden_size, output_dim=10, n_heads=args.num_tasks, prev_weights=vanilla_weights).to(device)
         optimizer = AdamW(model.parameters(), lr = args.learning_rate, eps = args.adam_epsilon)
     
     else:

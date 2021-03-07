@@ -8,19 +8,22 @@ from blitz.utils import variational_estimator
 from layer.bayesian import VCL_layer
 
 class Vanilla_NN(torch.nn.Module):
-    #TODO: correct this so that it does not have only one hidden layer!
-    def __init__(self, in_dim, hidden_dim, out_dim):
+    def __init__(self, in_dim, hidden_dim, out_dim, num_hidden_layers=5):
 
         super(Vanilla_NN, self).__init__()
 
         self.relu = torch.nn.RELU()
         self.inputLayer = torch.nn.Linear(in_dim, hidden_dim)
-        self.hiddenLayer = torch.nn.Linear(hidden_dim, hidden_dim)
+        self.hiddenLayers = []
+        for i in range(num_hidden_layers):
+            self.hiddenLayers.append(torch.nn.Linear(hidden_dim, hidden_dim))
         self.outputLayer = torch.nn.Linear(hidden_dim, out_dim)
 
     def forward(self, x):
         h1 = self.relu(self.inputLayer(x))
-        h2 = self.relu(self.hiddenLayer(h1))
+        for hidden_layer in self.hiddenLayers:
+            h2 = self.relu(hidden_layer(h1))
+            h1=h2
         prediction_logits = self.outputLayer(h2)
         
         return prediction_logits        
@@ -47,7 +50,7 @@ class MFVI_NN(torch.nn.Module):
         # Initialise using the Vanilla neural network weights when the model is first initialised
         self.init_weights(prev_weights)
 
-    def init_weights():
+    def init_weights(self, prev_weights):
         """
         Initialise using Vanilla neural netwrok parameters for the means and a pre-decided variance
         """
@@ -69,7 +72,7 @@ class VCL_discriminative(torch.nn.module):
         self.input_dim = shared_layer_dim
         self.shared_layer_dim = layer_size
         self.output_dim = output_dim
-        self.n_shared_layers = n_layers
+        self.n_shared_layers = n_shared_layers
         self.n_heads = n_heads
         self.init_variance = init_variance
 
@@ -78,7 +81,7 @@ class VCL_discriminative(torch.nn.module):
 
         self.heads = torch.nn.ModuleList([VCL_layer(shared_layer_dim[-1], output_dim, init_variance) for _ in range(n_heads)])
 
-        self.softmax = nn.Softmax(dim=1)
+        self.softmax = torch.nn.Softmax(dim=1)
         return
 
     def forward(self, x, head:int):
@@ -98,7 +101,7 @@ class VCL_discriminative(torch.nn.module):
         div = torch.add(div, self.heads[head].kl_divergence())
         return div
 
-    def update_prior_posterior(self. head:int):
+    def update_prior_posterior(self, head:int):
         for layer in self.shared_layers:
             layer.update_prior_posterior()
         self.heads[head].update_prior_posterior()
