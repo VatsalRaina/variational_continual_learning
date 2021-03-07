@@ -8,7 +8,7 @@ from blitz.utils import variational_estimator
 from layer.bayesian import VCL_layer
 
 class Vanilla_NN(torch.nn.Module):
-    def __init__(self, in_dim, hidden_dim, out_dim, num_hidden_layers=5):
+    def __init__(self, in_dim, hidden_dim, out_dim, num_hidden_layers=2):
 
         super(Vanilla_NN, self).__init__()
 
@@ -36,13 +36,15 @@ class Vanilla_NN(torch.nn.Module):
 # https://github.com/piEsposito/blitz-bayesian-deep-learning 
 @variational_estimator
 class MFVI_NN(torch.nn.Module):
-    def __init__(self, in_dim, hidden_dim, out_dim, num_tasks, prev_weights):
+    def __init__(self, in_dim, hidden_dim, out_dim, num_tasks, prev_weights, num_hidden_layers=2):
 
         super(MFVI_NN, self).__init__()
 
         self.relu = torch.nn.RELU()
         self.inputLayer = BayesianLinear(in_dim, hidden_dim)
-        self.hiddenLayer = BayesianLinear(hidden_dim, hidden_dim)
+        self.hiddenLayers = []
+        for i in range(num_hidden_layers):
+            self.hiddenLayers.append(BayesianLinear(hidden_dim, hidden_dim))
         self.outputHeads = []
         for i in range(num_tasks):
             self.outputHeads.append(BayesianLinear(hidden_dim, out_dim))
@@ -59,7 +61,9 @@ class MFVI_NN(torch.nn.Module):
     def forward(self, x, task):
 
         h1 = self.relu(self.inputLayer(x))
-        h2 = self.relu(self.hiddenLayer(h1))
+        for hidden_layer in self.hiddenLayers:
+            h2 = self.relu(hidden_layer(h1))
+            h1=h2
         prediction_logits = self.outputHeads[task](h2)
         
         return prediction_logits

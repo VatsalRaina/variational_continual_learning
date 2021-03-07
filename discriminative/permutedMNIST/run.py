@@ -27,7 +27,7 @@ parser.add_argument('--no_epochs', type=int, default=100, help='Specify the numb
 parser.add_argument('--num_tasks', type=int, default=5, help='Specify the number of tasks to perform in continual learning')
 parser.add_argument('--coreset_size', type=int, default=0, help='Specify the coreset size for episodic memory')
 parser.add_argument('--coreset_size', type=int, default=1, help='Seed value for reproducibility')
-parser.add_argument('--adam_epsilon', type=float, default=e-8, help='Epislon value in Adam optimizer')
+parser.add_argument('--adam_epsilon', type=float, default=1e-8, help='Epislon value in Adam optimizer')
 parser.add_argument('--learning_rate', type=int, default=2e-3, help='Learning rate during training')
 parser.add_argument('--use_from_scratch_model', action='store_true', help='Which model to use')
 
@@ -130,7 +130,7 @@ def main(args):
     ################## Train Vanilla_NN using data for first task ######################
     data_processor = PermutedMnistGenerator(args.num_tasks)
     X_train, Y_train, X_test, Y_test = data_processor.create_tasks(args.num_tasks)
-    x_train, y_train = X_train[0], Y_train[0]
+    x_train, y_train = torch.tensor(X_train[0]).to(device), torch.tensor(Y_train[0]).long().to(device)
     train_data = TensorDataset(x_train, y_train)
     train_sampler = RandomSampler(train_data)
     train_dataloader = DataLoader(train_data, sampler=train_sampler, batch_size=args.batch_size)
@@ -203,7 +203,7 @@ def main(args):
     
     for task_id in range(args.num_tasks):
         # Extract task specific data
-        x_train, y_train = X_train[task_id], Y_train[task_id]
+        x_train, y_train = torch.tensor(X_train[task_id]).to(device), torch.tensor(Y_train[task_id]).long().to(device)
         train_data = TensorDataset(x_train, y_train)
         train_sampler = RandomSampler(train_data)
         train_dataloader = DataLoader(train_data, sampler=train_sampler, batch_size=args.batch_size)
