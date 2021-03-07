@@ -56,6 +56,7 @@ class MFVI_NN(torch.nn.Module):
         """
         Initialise using Vanilla neural netwrok parameters for the means and a pre-decided variance
         """
+        # Instead of initialising using Vanilla NN, this model can be trained with all the variances for the first task
         pass
 
     def forward(self, x, task):
