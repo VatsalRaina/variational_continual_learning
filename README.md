@@ -25,6 +25,6 @@ Which implies that the distirbution of the model paremeters can be updated after
 
 ### To install
 ````
-pip install torch<br />
+pip install torch
 pip install blitz-bayesian-pytorch
 ````
