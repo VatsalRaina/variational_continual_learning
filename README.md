@@ -1,4 +1,4 @@
-# VARIATIONAL CONTIUAL LEARNING
+# VARIATIONAL CONTINUAL LEARNING
 
 ### By Aymeric Roucher, Vatsal Raina, Shawn Shen and Adian Liusie
 
@@ -10,7 +10,7 @@ This repositry is a reimplementation of the [variational continual learning](htt
 
 __Continual learning__ is the area of machine learning where a model is given multiple different tasks that it should try to optimize over and perform well at. However the big caveat in this task is that not all task data is available at the same time: instead, the tasks are provided in an online fashion (i.e. the tasks are given one after another) and so the model parameters must be updated incrementally after seeing a specific subset of the task data. Although one may at first consider updating the parameters of a standard deep learning architecture task after task using SGD, it has been shown that deep learning mondels generally suffer from catastrophic forgetting and a model trained in this manner often performs very poorly on early tasks. We therefore want an approach where even though a model may only be trained incrementally on individual tasks, it can still retain relevant information and perform reasonably well over all tasks.
 
-#### Baysian Solution
+#### Bayesian Solution
 
 The VCL paper is built on the observation that Bayesian inference is a very natural framework for Continual learning. In particular given model parameters $θ$, a prior over the model parameters $p(θ)$ and training data $D$, assuming independence between training examples, the posterior distirbution of the parameters given the data can be written as:
 
